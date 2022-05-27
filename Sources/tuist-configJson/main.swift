@@ -27,6 +27,48 @@ var fileString: String {
     } catch { return "" }
 }
 
+let options = ConfigJsonOptions.parseOrExit()
+
+if options.show {
+    createFile()
+    print(fileString)
+}
+
+if options.clear {
+    deleteFile()
+    createFile()
+}
+
+if
+    let remove = options.remove,
+    let result = stringRemoved(targetString: remove, originString: fileString)
+{
+    deleteFile()
+    createFile(originString: result)
+}
+
+if let add = options.add {
+    let range = add.range(of: ":")
+    if let range = range {
+        let prefixString = "\(add.prefix(upTo: range.lowerBound))"
+        let suffixString = add.suffix(from: range.upperBound)
+        var resultString = stringRemoved(targetString: prefixString, originString: fileString) ?? fileString
+        let remainString = resultString.count == 4 ? "\n" : ",\n"
+        let insertIndex = fileString.index(fileString.startIndex, offsetBy: 2)
+        resultString.insert(contentsOf: "\"\(prefixString)\":\(suffixString)\(remainString)", at: insertIndex)
+        deleteFile()
+        createFile(originString: resultString)
+    }
+}
+
+let task = Process()
+task.executableURL = URL(fileURLWithPath: "/bin/zsh")
+task.arguments = ["-c", "tuist clean manifests"]
+task.standardOutput = nil
+try task.run()
+task.waitUntilExit()
+
+// MARK: - Helper
 func createFile(originString: String = "{\n\n}") {
     if !FileManager.default.fileExists(atPath: pathURL.path) {
         let data = originString.data(using: .utf8)
@@ -63,38 +105,4 @@ func stringRemoved(targetString: String, originString: String) -> String? {
         }
     }
     return nil
-}
-
-let options = ConfigJsonOptions.parseOrExit()
-
-if options.show {
-    createFile()
-    print(fileString)
-}
-
-if options.clear {
-    deleteFile()
-    createFile()
-}
-
-if
-    let remove = options.remove,
-    let result = stringRemoved(targetString: remove, originString: fileString)
-{
-    deleteFile()
-    createFile(originString: result)
-}
-
-if let add = options.add {
-    let range = add.range(of: ":")
-    if let range = range {
-        let prefixString = "\(add.prefix(upTo: range.lowerBound))"
-        let suffixString = add.suffix(from: range.upperBound)
-        var resultString = stringRemoved(targetString: prefixString, originString: fileString) ?? fileString
-        let remainString = resultString.count == 4 ? "\n" : ",\n"
-        let insertIndex = fileString.index(fileString.startIndex, offsetBy: 2)
-        resultString.insert(contentsOf: "\"\(prefixString)\":\(suffixString)\(remainString)", at: insertIndex)
-        deleteFile()
-        createFile(originString: resultString)
-    }
 }
